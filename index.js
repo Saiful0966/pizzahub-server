@@ -21,6 +21,7 @@ export async function connectToMongoDB() {
     return client;
   } catch (err) {
     console.dir(err);
+    throw err;
   }
 }
 
@@ -28,7 +29,7 @@ const connectedClient = await connectToMongoDB();
 const db = connectedClient.db("pizzahub");
 // Collections 
     const usersCollection = db.collection('user');
-    const menuCollection = db.collection('menuItems');
+    const menuCollection = db.collection('menuitems');
     const ordersCollection = db.collection('orders');
     const favoritesCollection = db.collection('favorites');
     const transactionsCollection = db.collection('transactions');
@@ -51,6 +52,46 @@ app.get('/users', async (req, res) => {
   }
 });
 
+
+
+// GET Menu Items API
+app.get('/menuitems', async (req, res) => {
+  try {
+    const cursor = menuCollection.find({});
+    const result = await cursor.toArray();
+    res.send(result);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send({
+      message: 'Failed to fetch menu items'
+    });
+  }
+});
+
+// POST Menu Item API
+app.post('/menuitems', async (req, res) => {
+  try {
+    const menuItem = req.body;
+
+    const result = await menuCollection.insertOne({
+      ...menuItem,
+      price: Number(menuItem.price),
+      createdAt: new Date()
+    });
+
+    res.status(201).send({
+      success: true,
+      message: 'Menu item added successfully',
+      insertedId: result.insertedId
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).send({
+      message: 'Failed to add menu item'
+    });
+  }
+}); 
 
 
 app.listen(port, () => {
