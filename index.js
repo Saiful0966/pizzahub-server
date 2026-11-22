@@ -25,12 +25,33 @@ export async function connectToMongoDB() {
 }
 
 const connectedClient = await connectToMongoDB();
-
+const db = connectedClient.db("pizzahub");
+// Collections 
+    const usersCollection = db.collection('user');
+    const menuCollection = db.collection('menuItems');
+    const ordersCollection = db.collection('orders');
+    const favoritesCollection = db.collection('favorites');
+    const transactionsCollection = db.collection('transactions');
 
 
 app.get('/', (req, res) => {
   res.send('PizzaHub Server is running!');
 });
+
+// users api 
+
+app.get('/users', async (req, res) => {
+  try {
+    const cursor = usersCollection.find({});
+    const result = await cursor.toArray();
+    res.send(result);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send({ message: 'Failed to fetch users' });
+  }
+});
+
+
 
 app.listen(port, () => {
   console.log(`PizzaHub server running on port ${port}`);
