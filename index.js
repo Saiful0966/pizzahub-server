@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import 'dotenv/config'
 import { MongoClient } from 'mongodb';
+import { ObjectId } from 'mongodb';
 
 
 const app = express();
@@ -92,6 +93,21 @@ app.post('/menuitems', async (req, res) => {
     });
   }
 }); 
+
+//  Details page api 
+
+app.get('/menuitems/:id', async (req, res) => {
+  try {
+    const query = { _id: new ObjectId(req.params.id) };
+    const result = await menuCollection.findOne(query);
+    res.send(result);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send({
+      message: 'Failed to fetch menu item'
+    });
+  }
+});
 
 
 app.listen(port, () => {
