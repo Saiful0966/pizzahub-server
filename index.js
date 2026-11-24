@@ -112,7 +112,7 @@ app.get('/menuitems/:id', async (req, res) => {
 
 // order api 
 
-// GET Orders API (Admin, Vendor, Customer)
+// GET Orders API
 app.get('/orders', async (req, res) => {
   try {
     const { role, email } = req.query;
@@ -122,13 +122,10 @@ app.get('/orders', async (req, res) => {
     const normalizedEmail = email ? String(email).trim().toLowerCase() : '';
 
     if (normalizedRole === 'customer' && normalizedEmail) {
-      // Customer 
+      // Customers Can Only View Their Own Orders
       query.customerEmail = normalizedEmail;
-    } else if (normalizedRole === 'vendor' && normalizedEmail) {
-      // Vendor 
-      query['items.vendorEmail'] = normalizedEmail;
     }
-    // normalizedRole === 'admin' হলে query ফাঁকা ({}) থাকবে, ফলে সব অর্ডার দেখাবে
+    // Show All Customer Orders for Vendors and Admins
 
     const cursor = ordersCollection.find(query).sort({ createdAt: -1 });
     const result = await cursor.toArray();
@@ -182,7 +179,48 @@ app.post('/orders', async (req, res) => {
   }
 });
 
+  //  patch order api 
 
+// API to Update Order Status (Pending, Accepted, Delivered) by Vendor/Admin
+app.patch("/orders/:id/status", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    if (!ObjectId.isValid(id)) {
+      return res.status(400).send({ message: "Invalid order ID" });
+    }
+
+    const allowedStatuses = ["Pending", "Accepted", "Delivered"];
+    const matchedStatus = allowedStatuses.find(
+      (s) => s.toLowerCase() === String(status || "").trim().toLowerCase()
+    );
+
+    if (!matchedStatus) {
+      return res.status(400).send({
+        message: "Status must be Pending, Accepted, or Delivered",
+      });
+    }
+
+    const result = await ordersCollection.updateOne(
+      { _id: new ObjectId(id) },
+      { $set: { status: matchedStatus, updatedAt: new Date() } }
+    );
+
+    if (result.matchedCount === 0) {
+      return res.status(404).send({ message: "Order not found" });
+    }
+
+    res.send({
+      success: true,
+      message: "Order status updated",
+      status: matchedStatus,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send({ message: "Failed to update order status" });
+  }
+});
 
 
 
