@@ -110,6 +110,84 @@ app.get('/menuitems/:id', async (req, res) => {
 });
 
 
+// order api 
+
+// GET Orders API (Admin, Vendor, Customer)
+app.get('/orders', async (req, res) => {
+  try {
+    const { role, email } = req.query;
+    const query = {};
+
+    const normalizedRole = role ? String(role).trim().toLowerCase() : '';
+    const normalizedEmail = email ? String(email).trim().toLowerCase() : '';
+
+    if (normalizedRole === 'customer' && normalizedEmail) {
+      // Customer 
+      query.customerEmail = normalizedEmail;
+    } else if (normalizedRole === 'vendor' && normalizedEmail) {
+      // Vendor 
+      query['items.vendorEmail'] = normalizedEmail;
+    }
+    // normalizedRole === 'admin' হলে query ফাঁকা ({}) থাকবে, ফলে সব অর্ডার দেখাবে
+
+    const cursor = ordersCollection.find(query).sort({ createdAt: -1 });
+    const result = await cursor.toArray();
+    res.send(result);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send({
+      message: 'Failed to fetch orders'
+    });
+  }
+});
+
+
+// POST Order API
+app.post('/orders', async (req, res) => {
+  try {
+    const order = req.body;
+    const role = String(order.customerRole || order.role || 'customer')
+      .trim()
+      .toLowerCase();
+
+    // Admin and Vendor Are Not Allowed to Place Orders
+    if (role === 'admin' || role === 'vendor') {
+      return res.status(403).send({
+        success: false,
+        message: 'Admins and vendors are not allowed to place orders'
+      });
+    }
+
+    const result = await ordersCollection.insertOne({
+      ...order,
+      customerRole: role,
+      customerEmail: order.customerEmail
+        ? String(order.customerEmail).trim().toLowerCase()
+        : null,
+      totalAmount: Number(order.totalAmount || 0),
+      status: order.status || 'pending',
+      createdAt: new Date()
+    });
+
+    res.status(201).send({
+      success: true,
+      message: 'Order placed successfully',
+      insertedId: result.insertedId
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send({
+      message: 'Failed to place order'
+    });
+  }
+});
+
+
+
+
+
+
+
 app.listen(port, () => {
   console.log(`PizzaHub server running on port ${port}`);
 });
