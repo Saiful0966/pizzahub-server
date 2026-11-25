@@ -854,7 +854,29 @@ app.delete('/menuitems/:id', async (req, res) => {
 
 
 
+// GET upcoming/latest approved menu items top 6  items
+app.get('/upcoming-menuitems', async (req, res) => {
+  try {
+    const limitParam = Number(req.query.limit);
+    const limit =
+      Number.isFinite(limitParam) && limitParam > 0
+        ? Math.min(limitParam, 20)
+        : 6;
 
+    const cursor = menuCollection
+      .find({ status: { $regex: /^approved$/i } })
+      .sort({ createdAt: -1, _id: -1 })
+      .limit(limit);
+
+    const result = await cursor.toArray();
+    res.send(result);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send({
+      message: 'Failed to fetch upcoming menu items',
+    });
+  }
+});
 
 
 
